@@ -1,22 +1,43 @@
+const modes = ['normal' , 'hard'] as const
+type Mode = typeof modes[number]
+
 const printLine = (text: string,breakLine: boolean=true)=>{
     process.stdout.write(text + (breakLine ? '\n' : ''))
 }
 
+const readLine =async () => {
+    const input : string = await new Promise((resolve) => process.stdin.once('data',(data) => resolve(data.toString())))
+    return input.trim()
+    
+}
+
 const promptInput = async ( text: string)=>{
     printLine(`\n${text}\n`,false)
-    const input: string = await new Promise((resolve) => process.stdin.once('data',(data) => resolve(data.toString())))
-    return input.trim()
+    return readLine()
 }
+
+const promptSelect = async <T extends string>(text: string, values: readonly T[]): Promise<T> =>{
+    printLine(`\n${text}`)
+    values.forEach((value) =>{
+        printLine(`- ${value}`)
+    })
+    printLine('> ',false)
+
+    const input = (await readLine()) as T
+    if (values.includes(input)){
+        return input
+    } else {
+        printLine(`選択肢の中から選んで！`)
+        return promptSelect<T>(text,values)
+    }
+}
+
 
 class HitAndBlow{
     private readonly answerSource = ['0','1','2','3','4','5','6','7','8','9']
     private answer : string[] = []
     private tryCount  = 0
-    private mode : 'normal' | 'hard' | 'honi'
-
-    constructor(mode: 'normal' | 'hard'){
-        this.mode = mode
-    }
+    private mode : Mode = 'normal'
 
     private getAnswerLength() {
         switch(this.mode){
@@ -24,15 +45,14 @@ class HitAndBlow{
                 return 3
             case 'hard':
                 return 4 
-            case 'honi':
-                return 5
             default:
                 const neverValue : never = this.mode
                 throw new Error(`${this.mode}は無効なモードです`)
         }
     }
 
-    setting(){
+    async setting(){
+        this.mode = await promptSelect<Mode>('モードを入れてください',modes)
         const answerLength = this.getAnswerLength()
 
         while (this.answer.length < answerLength){
@@ -103,8 +123,8 @@ class HitAndBlow{
     // const age = await promptInput('年齢を入力してください')
     // console.log(age)
     // process.exit()
-    const hitAndBlow = new HitAndBlow('hard')
-    hitAndBlow.setting()
+    const hitAndBlow = new HitAndBlow()
+    await hitAndBlow.setting()
     await hitAndBlow.play()
     hitAndBlow.end()
 })()
